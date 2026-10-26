@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FFFAF5;
+  --color-blush: #F9DDE5;
+  --color-lavender: #E9DFFF;
+  --color-butter: #FFF0B8;
+  --color-mint: #DDF3DE;
+  --color-powder: #DDECFB;
+  --color-peach: #FFDCCB;
+  --color-plum: #403344;
+  --color-mauve: #817583;
+
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Nunito", "Plus Jakarta Sans", sans-serif;
+}
+
+:root {
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  color: #403344;
+  background-color: #FFFAF5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #FFFAF5;
+}
+
+/* Custom soft diffuse shadows */
+.soft-shadow {
+  box-shadow: 0 12px 35px -8px rgba(64, 51, 68, 0.07), 0 4px 12px -2px rgba(64, 51, 68, 0.03);
+}
+
+.soft-shadow-lg {
+  box-shadow: 0 20px 45px -10px rgba(64, 51, 68, 0.1), 0 6px 18px -4px rgba(64, 51, 68, 0.04);
+}
+
+.soft-shadow-colored {
+  box-shadow: 0 16px 36px -6px rgba(233, 223, 255, 0.45), 0 6px 14px -3px rgba(249, 221, 229, 0.3);
+}
+
+/* Custom floating animations for decor */
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+@keyframes gentle-float-alt {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-1.5deg);
+  }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+.animate-float {
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+.animate-float-alt {
+  animation: gentle-float-alt 7s ease-in-out infinite;
+}
+
+.animate-pulse-gentle {
+  animation: gentle-pulse 4s ease-in-out infinite;
+}
+
+/* Accessible focus ring */
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid #817583;
+  outline-offset: 3px;
+}
+
+/* Smooth custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #FFFAF5;
+}
+::-webkit-scrollbar-thumb {
+  background: #E9DFFF;
+  border-radius: 9999px;
+  border: 2px solid #FFFAF5;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F9DDE5;
+}

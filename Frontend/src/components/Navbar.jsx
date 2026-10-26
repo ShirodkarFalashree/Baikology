@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Sparkles, Heart } from 'lucide-react';
 
-export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
+export default function Navbar({ onOpenOnboarding }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,6 +29,8 @@ export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/' + href);
     }
   };
 
@@ -40,8 +44,8 @@ export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
         {/* Brand Logo */}
-        <a
-          href="#"
+        <Link
+          to="/"
           className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#817583] rounded-full"
           aria-label="Baikology Home"
         >
@@ -71,7 +75,7 @@ export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
               The Science of being 'her'
             </span>
           </div>
-        </a>
+        </Link>
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-1.5 bg-white/70 backdrop-blur-sm px-4 py-1.5 rounded-full border border-[#E9DFFF]/60 shadow-[0_2px_12px_rgba(64,51,68,0.03)]">
@@ -89,19 +93,19 @@ export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
 
         {/* Desktop Action Buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={onOpenLogin}
+          <Link
+            to="/login"
             className="text-sm font-semibold text-[#817583] hover:text-[#403344] px-3.5 py-2 rounded-full transition-colors"
           >
             Log in
-          </button>
-          <button
-            onClick={onOpenOnboarding}
+          </Link>
+          <Link
+            to="/register"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#403344] bg-gradient-to-r from-[#F9DDE5] via-[#E9DFFF] to-[#DDF3DE] hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
           >
             <Sparkles className="w-4 h-4 text-[#756291]" />
             Find your flow
-          </button>
+          </Link>
         </div>
 
         {/* Mobile Hamburger Button */}
@@ -134,25 +138,21 @@ export default function Navbar({ onOpenOnboarding, onOpenLogin }) {
             ))}
 
             <div className="pt-3 border-t border-[#E9DFFF]/60 flex flex-col gap-2.5">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLogin();
-                }}
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3 text-center text-sm font-semibold text-[#817583] hover:text-[#403344] rounded-2xl bg-white border border-[#E9DFFF]/80"
               >
                 Log in
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenOnboarding();
-                }}
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3.5 text-center text-sm font-bold text-[#403344] bg-gradient-to-r from-[#F9DDE5] via-[#E9DFFF] to-[#DDF3DE] rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4 text-[#756291]" />
                 Find your flow
-              </button>
+              </Link>
             </div>
           </nav>
         </div>

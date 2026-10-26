@@ -1,7 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Heart, Sparkles, Shield, ArrowUp } from 'lucide-react';
 
-export default function Footer({ onOpenOnboarding, onOpenLogin }) {
+export default function Footer({ onOpenOnboarding }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -13,7 +14,7 @@ export default function Footer({ onOpenOnboarding, onOpenLogin }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-[#E9DFFF]/70">
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5">
+            <Link to="/" className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#F9DDE5] via-[#E9DFFF] to-[#FFF0B8] flex items-center justify-center shadow-xs">
                 <svg viewBox="0 0 32 32" className="w-5 h-5 text-[#403344]" fill="none">
                   <circle cx="16" cy="10" r="5" fill="#F9DDE5" />
@@ -26,7 +27,7 @@ export default function Footer({ onOpenOnboarding, onOpenLogin }) {
               <span className="text-xl font-bold tracking-tight text-[#403344] font-['Nunito',sans-serif]">
                 Baikology
               </span>
-            </div>
+            </Link>
 
             <p className="text-sm font-medium text-[#756291]">
               “The Science of being 'her'.”
@@ -37,18 +38,18 @@ export default function Footer({ onOpenOnboarding, onOpenLogin }) {
             </p>
 
             <div className="pt-2 flex items-center gap-2">
-              <button
-                onClick={onOpenOnboarding}
+              <Link
+                to="/register"
                 className="px-4 py-2 rounded-full bg-[#FFFAF5] hover:bg-[#F9DDE5] border border-[#E9DFFF] text-xs font-bold text-[#403344] transition-colors"
               >
-                Join early access
-              </button>
-              <button
-                onClick={onOpenLogin}
+                Create your space
+              </Link>
+              <Link
+                to="/login"
                 className="px-4 py-2 rounded-full text-xs font-semibold text-[#817583] hover:text-[#403344] transition-colors"
               >
                 Member login
-              </button>
+              </Link>
             </div>
           </div>
 

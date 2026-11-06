@@ -1,27 +1,39 @@
 /**
  * Baikology Authentication API Client
  *
- * Prepared for FastAPI backend integration at /api/v1/auth/*
- * Adheres strictly to privacy principles: never logs or stores credentials.
+ * Connected to Node.js / Express backend at http://localhost:5000/api/v1/auth/*
+ * Adheres strictly to privacy principles: never logs or exposes credentials.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 /**
  * Helper to handle fetch requests with timeout and friendly connection error handling
  */
-async function apiRequest(endpoint, bodyData) {
+async function apiRequest(endpoint, bodyData, options = {}) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  const method = options.method || (bodyData ? 'POST' : 'GET');
+  const token = options.token || localStorage.getItem('baikology_token');
+
+  const headers = {
+    'Accept': 'application/json',
+  };
+
+  if (bodyData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(bodyData),
+      method,
+      headers,
+      body: bodyData ? JSON.stringify(bodyData) : undefined,
       signal: controller.signal,
     });
 
@@ -34,19 +46,18 @@ async function apiRequest(endpoint, bodyData) {
     }
 
     if (!response.ok) {
-      // 404 means the endpoint isn't mounted yet in the backend
       if (response.status === 404) {
         return {
           success: false,
           isBackendUnavailable: true,
           message:
-            'The authentication service endpoint is currently being prepared on the backend. Your details have been validated locally.',
+            'The API endpoint is currently not reachable. Please ensure the backend is running.',
         };
       }
 
       return {
         success: false,
-        message: data?.detail || `Server responded with status ${response.status}.`,
+        message: data?.detail || data?.message || `Server responded with status ${response.status}.`,
         errors: data?.errors,
       };
     }
@@ -58,12 +69,13 @@ async function apiRequest(endpoint, bodyData) {
   } catch (err) {
     clearTimeout(timeoutId);
 
-    // Network error or aborted timeout (e.g., backend server not running yet)
     return {
       success: false,
       isBackendUnavailable: true,
       message:
-        'The backend authentication service is currently being prepared. Your inputs passed all frontend validation rules, but live server authentication is not connected yet.',
+        'Could not connect to the authentication server at ' +
+        API_BASE_URL +
+        '. Please make sure the backend server is running.',
     };
   }
 }
@@ -96,5 +108,42 @@ export async function registerUser({ name, email, password }) {
 export async function forgotPassword({ email }) {
   return await apiRequest('/api/v1/auth/forgot-password', {
     email,
+  });
+}
+
+/**
+ * Reset password using token from email link
+ */
+export async function resetPassword({ token, newPassword }) {
+  return await apiRequest('/api/v1/auth/reset-password', {
+    token,
+    newPassword,
+  });
+}
+
+/**
+ * Get authenticated user profile (verifies session against backend DB)
+ */
+export async function getCurrentUser(token) {
+  return await apiRequest('/api/v1/auth/me', null, { method: 'GET', token });
+}
+
+/**
+ * Save onboarding questionnaire responses to user profile in backend DB
+ */
+export async function saveQuestionnaire(questionnaireData, token) {
+  return await apiRequest('/api/v1/auth/questionnaire', questionnaireData, {
+    method: 'POST',
+    token,
+  });
+}
+
+/**
+ * Log daily mood check-in to user profile in backend DB
+ */
+export async function logMoodCheckIn(moodData, token) {
+  return await apiRequest('/api/v1/auth/mood', moodData, {
+    method: 'POST',
+    token,
   });
 }

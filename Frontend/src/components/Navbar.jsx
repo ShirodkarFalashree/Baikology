@@ -93,19 +93,31 @@ export default function Navbar({ onOpenOnboarding }) {
 
         {/* Desktop Action Buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            to="/login"
-            className="text-sm font-semibold text-[#817583] hover:text-[#403344] px-3.5 py-2 rounded-full transition-colors"
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#403344] bg-gradient-to-r from-[#F9DDE5] via-[#E9DFFF] to-[#DDF3DE] hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-          >
-            <Sparkles className="w-4 h-4 text-[#756291]" />
-            Find your flow
-          </Link>
+          {localStorage.getItem('baikology_token') ? (
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#403344] bg-gradient-to-r from-[#F9DDE5] via-[#E9DFFF] to-[#DDF3DE] hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            >
+              <Sparkles className="w-4 h-4 text-[#756291]" />
+              My Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm font-semibold text-[#817583] hover:text-[#403344] px-3.5 py-2 rounded-full transition-colors"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-[#403344] bg-gradient-to-r from-[#F9DDE5] via-[#E9DFFF] to-[#DDF3DE] hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              >
+                <Sparkles className="w-4 h-4 text-[#756291]" />
+                Find your flow
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger Button */}

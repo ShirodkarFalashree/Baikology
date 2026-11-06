@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
 import AuthIllustration from '../components/auth/AuthIllustration';
 import FormField from '../components/auth/FormField';
@@ -9,6 +9,7 @@ import { registerUser } from '../api/auth';
 import { ArrowRight, Loader2, Sparkles, AlertCircle, Info, Heart } from 'lucide-react';
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -86,10 +87,9 @@ export default function RegisterPage() {
 
     if (result.isBackendUnavailable) {
       setServerNotice({
-        type: 'info',
-        title: 'Backend Registration in Development',
-        message:
-          'Your account details passed all local validation rules! The FastAPI backend authentication service is being prepared separately. When live, accounts will be created securely with password hashing and zero data-selling.',
+        type: 'error',
+        title: 'Backend Connection Issue',
+        message: result.message,
       });
     } else if (!result.success) {
       setServerNotice({
@@ -98,11 +98,21 @@ export default function RegisterPage() {
         message: result.message || 'Something went wrong. Please try again.',
       });
     } else {
+      const user = result.data?.user;
       setServerNotice({
         type: 'success',
-        title: 'Welcome to Baikology! 🌸',
-        message: 'Your account has been created successfully.',
+        title: `Welcome to Baikology, ${formData.name}! 🌸`,
+        message: result.data?.message || 'Your account has been created successfully. Taking you to your welcome questionnaire...',
       });
+      if (result.data?.token) {
+        localStorage.setItem('baikology_token', result.data.token);
+        localStorage.setItem('baikology_user', JSON.stringify(user || { name: formData.name, email: formData.email, isOnboardingCompleted: false }));
+      }
+
+      // New customer must complete questionnaire
+      setTimeout(() => {
+        navigate('/onboarding');
+      }, 700);
     }
   };
 

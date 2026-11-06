@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
 import AuthIllustration from '../components/auth/AuthIllustration';
 import FormField from '../components/auth/FormField';
@@ -8,6 +8,7 @@ import { loginUser } from '../api/auth';
 import { ArrowRight, Loader2, Sparkles, AlertCircle, Info } from 'lucide-react';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -66,12 +67,10 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (result.isBackendUnavailable) {
-      // Honest presentation: backend authentication service is being prepared separately
       setServerNotice({
-        type: 'info',
-        title: 'Backend Service Being Prepared',
-        message:
-          'Your form was validated locally. The FastAPI backend authentication service is being set up separately, so live login is not connected yet. We never simulate logins or store credentials without a secure server.',
+        type: 'error',
+        title: 'Backend Connection Issue',
+        message: result.message,
       });
     } else if (!result.success) {
       setServerNotice({
@@ -80,12 +79,28 @@ export default function LoginPage() {
         message: result.message || 'Please check your credentials and try again.',
       });
     } else {
-      // Future when live backend is ready
+      // Successful login from backend
+      const user = result.data?.user;
       setServerNotice({
         type: 'success',
-        title: 'Welcome back!',
-        message: 'Authentication successful.',
+        title: `Welcome back, ${user?.name || 'lovely'}! 💗`,
+        message: 'You are now signed into your private, gentle space.',
       });
+      if (result.data?.token) {
+        localStorage.setItem('baikology_token', result.data.token);
+        localStorage.setItem('baikology_user', JSON.stringify(user));
+      }
+
+      // Check DB questionnaire status: if user has not completed questionnaire, go to questionnaire first
+      const hasCompletedQuestionnaire = Boolean(user?.isOnboardingCompleted);
+
+      setTimeout(() => {
+        if (hasCompletedQuestionnaire) {
+          navigate('/dashboard');
+        } else {
+          navigate('/onboarding');
+        }
+      }, 700);
     }
   };
 

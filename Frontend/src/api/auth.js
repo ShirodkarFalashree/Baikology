@@ -147,3 +147,47 @@ export async function logMoodCheckIn(moodData, token) {
     token,
   });
 }
+
+/**
+ * Fetch Dear Diary chat messages from user profile
+ */
+export async function getDiaryMessages(token) {
+  return await apiRequest('/api/v1/auth/diary', null, {
+    method: 'GET',
+    token,
+  });
+}
+
+/**
+ * Save a Dear Diary chat message to user profile in backend DB
+ */
+export async function saveDiaryMessage(messageData, token) {
+  return await apiRequest('/api/v1/auth/diary', messageData, {
+    method: 'POST',
+    token,
+  });
+}
+
+/**
+ * Clear Dear Diary chat history from user profile
+ */
+export async function clearDiaryMessages(token) {
+  return await apiRequest('/api/v1/auth/diary', null, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+/**
+ * Send chat message to Gemini AI Dear Diary Companion
+ */
+export async function sendDiaryChatMessage({ text, currentMood, previousMood, cycleAnalysis }, token) {
+  return await apiRequest(
+    '/api/v1/auth/diary/chat',
+    { text, currentMood, previousMood, cycleAnalysis },
+    {
+      method: 'POST',
+      token,
+    }
+  );
+}

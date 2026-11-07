@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../services/emailService');
+const { generateGeminiReply } = require('../services/geminiService');
 
 // Helper to sign JWT tokens
 function signToken(userId, email, rememberMe = false) {
@@ -77,6 +78,7 @@ exports.register = async (req, res) => {
         isOnboardingCompleted: newUser.isOnboardingCompleted || false,
         questionnaire: newUser.questionnaire || null,
         moodLogs: [],
+        diaryMessages: [],
       },
     });
   } catch (error) {
@@ -135,6 +137,7 @@ exports.login = async (req, res) => {
         isOnboardingCompleted: user.isOnboardingCompleted || false,
         questionnaire: user.questionnaire || null,
         moodLogs: user.moodLogs || [],
+        diaryMessages: user.diaryMessages || [],
       },
     });
   } catch (error) {
@@ -282,6 +285,7 @@ exports.getMe = async (req, res) => {
         isOnboardingCompleted: user.isOnboardingCompleted || false,
         questionnaire: user.questionnaire || null,
         moodLogs: user.moodLogs || [],
+        diaryMessages: user.diaryMessages || [],
         createdAt: user.createdAt,
       },
     });
@@ -401,6 +405,215 @@ exports.saveMoodLog = async (req, res) => {
     res.status(500).json({
       success: false,
       detail: error.message || 'Failed to save daily mood log.',
+    });
+  }
+};
+
+/**
+ * Get diary messages
+ * GET /api/v1/auth/diary
+ */
+exports.getDiaryMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        detail: 'User not found.',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      diaryMessages: user.diaryMessages || [],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      detail: error.message || 'Failed to fetch diary messages.',
+    });
+  }
+};
+
+/**
+ * Save a diary message
+ * POST /api/v1/auth/diary
+ */
+exports.saveDiaryMessage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        detail: 'User not found.',
+      });
+    }
+
+    const { sender, text, moodContext, moodShift, id } = req.body;
+
+    if (!text || !sender) {
+      return res.status(400).json({
+        success: false,
+        detail: 'Message text and sender are required.',
+      });
+    }
+
+    if (!Array.isArray(user.diaryMessages)) {
+      user.diaryMessages = [];
+    }
+
+    const newMsg = {
+      id: id || Date.now().toString() + Math.random().toString(36).substring(2, 7),
+      sender,
+      text,
+      moodContext: moodContext || '',
+      moodShift: moodShift || '',
+      timestamp: new Date(),
+    };
+
+    // Keep up to 100 recent messages for good performance
+    user.diaryMessages.push(newMsg);
+    if (user.diaryMessages.length > 100) {
+      user.diaryMessages = user.diaryMessages.slice(-100);
+    }
+
+    user.markModified('diaryMessages');
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Diary message recorded.',
+      diaryMessage: newMsg,
+      diaryMessages: user.diaryMessages,
+    });
+  } catch (error) {
+    console.error('Save diary message error:', error);
+    res.status(500).json({
+      success: false,
+      detail: error.message || 'Failed to save diary message.',
+    });
+  }
+};
+
+/**
+ * Clear diary messages
+ * DELETE /api/v1/auth/diary
+ */
+exports.clearDiaryMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        detail: 'User not found.',
+      });
+    }
+
+    user.diaryMessages = [];
+    user.markModified('diaryMessages');
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Diary messages cleared.',
+      diaryMessages: [],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      detail: error.message || 'Failed to clear diary messages.',
+    });
+  }
+};
+
+/**
+ * Chat with Gemini AI Dear Diary Companion
+ * POST /api/v1/auth/diary/chat
+ */
+exports.chatWithGemini = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        detail: 'User not found.',
+      });
+    }
+
+    const { text, currentMood, previousMood, cycleAnalysis } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        success: false,
+        detail: 'Message text is required.',
+      });
+    }
+
+    if (!Array.isArray(user.diaryMessages)) {
+      user.diaryMessages = [];
+    }
+
+    const userName = user.name || user.questionnaire?.preferredName || 'lovely';
+
+    // 1. Record User Message
+    const userMsg = {
+      id: 'user-' + Date.now(),
+      sender: 'user',
+      text: text.trim(),
+      moodContext: currentMood?.label || '',
+      timestamp: new Date(),
+    };
+    user.diaryMessages.push(userMsg);
+
+    // 2. Generate Gemini response
+    const aiReplyText = await generateGeminiReply({
+      userMessage: text.trim(),
+      userName,
+      currentMood,
+      previousMood,
+      cycleAnalysis,
+      questionnaire: user.questionnaire || {},
+      chatHistory: user.diaryMessages,
+    });
+
+    // 3. Record AI Message
+    const aiMsg = {
+      id: 'ai-' + Date.now(),
+      sender: 'ai',
+      text: aiReplyText,
+      moodContext: currentMood?.label || '',
+      timestamp: new Date(),
+    };
+    user.diaryMessages.push(aiMsg);
+
+    // Cap at 100 messages for storage efficiency
+    if (user.diaryMessages.length > 100) {
+      user.diaryMessages = user.diaryMessages.slice(-100);
+    }
+
+    user.markModified('diaryMessages');
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      aiReply: aiReplyText,
+      userMessage: userMsg,
+      aiMessage: aiMsg,
+      diaryMessages: user.diaryMessages,
+    });
+  } catch (error) {
+    console.error('Chat with Gemini error:', error);
+    res.status(500).json({
+      success: false,
+      detail: error.message || 'Failed to generate response.',
     });
   }
 };

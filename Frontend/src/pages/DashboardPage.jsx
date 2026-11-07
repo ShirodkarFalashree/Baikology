@@ -34,6 +34,7 @@ import {
   formatDate,
   formatShortDate,
 } from '../utils/cycleEngine';
+import DearDiaryChatbot from '../components/DearDiaryChatbot';
 
 export default function DashboardPage({ initialTab = 'home' }) {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ export default function DashboardPage({ initialTab = 'home' }) {
     color: '#DDF3DE',
     textColor: '#2C6336',
   });
+  const [previousMood, setPreviousMood] = useState(null);
   const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [forYouCategory, setForYouCategory] = useState('insights'); // insights | learn | selfcare
@@ -201,6 +203,9 @@ export default function DashboardPage({ initialTab = 'home' }) {
     };
 
     if (!targetDate || targetDate === new Date().toISOString().split('T')[0]) {
+      if (todayMood && todayMood.label !== moodObj.label) {
+        setPreviousMood(todayMood);
+      }
       setTodayMood(moodEntry);
       setMoodNote(noteText);
     }
@@ -429,81 +434,152 @@ export default function DashboardPage({ initialTab = 'home' }) {
         {/* ================= TAB: HOME (Dashboard Screen 07) ================= */}
         {activeTab === 'home' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Top Grid: Cycle Status Card + Today's Mood Card */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* Card 1: Dynamic Cycle Day & Biological Phase */}
-              <div className="lg:col-span-2 bg-gradient-to-br from-[#FFF8EE] via-[#FDF5F7] to-[#F5EFFF] rounded-[32px] p-6 sm:p-8 border border-[#E9DFFF] shadow-xs relative overflow-hidden flex flex-col justify-between">
-                <div className="relative z-10 max-w-md space-y-2">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 backdrop-blur-sm border border-[#E9DFFF] text-xs font-bold text-[#756291]">
-                    <span>Cycle Day {cycleAnalysis.cycleDay}</span>
-                    <span>•</span>
-                    <span className="text-[#403344]">{cycleAnalysis.phaseName}</span>
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-[#403344] font-['Nunito',sans-serif]">
-                    {cycleAnalysis.phaseHeadline}
-                  </h2>
-                  <p className="text-xs sm:text-sm text-[#817583] leading-relaxed">
-                    {cycleAnalysis.phaseDescription}
-                  </p>
+            {/* Dynamic Cycle Day & Biological Phase Banner */}
+            <div className="bg-gradient-to-br from-[#FFF8EE] via-[#FDF5F7] to-[#F5EFFF] rounded-[32px] p-6 sm:p-8 border border-[#E9DFFF] shadow-xs relative overflow-hidden flex flex-col justify-between">
+              <div className="relative z-10 max-w-2xl space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 backdrop-blur-sm border border-[#E9DFFF] text-xs font-bold text-[#756291]">
+                  <span>Cycle Day {cycleAnalysis.cycleDay}</span>
+                  <span>•</span>
+                  <span className="text-[#403344]">{cycleAnalysis.phaseName}</span>
                 </div>
-
-                <div className="relative z-10 pt-6 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => handleTabChange('cycle')}
-                    className="px-5 py-2.5 rounded-full bg-[#403344] hover:bg-[#2b222e] text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5"
-                  >
-                    <span>View cycle calendar</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[11px] text-[#756291] font-semibold bg-white/70 px-3 py-1 rounded-full border border-[#E9DFFF]">
-                    Next period: {cycleAnalysis.nextPeriodDateFormatted} (~{cycleAnalysis.daysUntilNextPeriod} days)
-                  </span>
-                </div>
-
-                {/* Decorative serene illustration badge */}
-                <div className="absolute right-4 bottom-2 text-7xl select-none opacity-85 hidden sm:block pointer-events-none">
-                  🧘‍♀️
-                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#403344] font-['Nunito',sans-serif]">
+                  {cycleAnalysis.phaseHeadline}
+                </h2>
+                <p className="text-xs sm:text-sm text-[#817583] leading-relaxed">
+                  {cycleAnalysis.phaseDescription}
+                </p>
               </div>
 
-              {/* Card 2: Today's Mood */}
-              <div className="bg-white rounded-[32px] p-6 border border-[#E9DFFF] shadow-xs flex flex-col justify-between space-y-4">
+              <div className="relative z-10 pt-5 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => handleTabChange('cycle')}
+                  className="px-5 py-2.5 rounded-full bg-[#403344] hover:bg-[#2b222e] text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>View cycle calendar</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[11px] text-[#756291] font-semibold bg-white/80 px-3 py-1.5 rounded-full border border-[#E9DFFF]">
+                  Next period: {cycleAnalysis.nextPeriodDateFormatted} (~{cycleAnalysis.daysUntilNextPeriod} days)
+                </span>
+                <span className="text-[11px] text-[#2C6336] font-semibold bg-[#DDF3DE]/80 px-3 py-1.5 rounded-full border border-[#DDF3DE]">
+                  Cycle rhythm: {cycleAnalysis.cycleLength} days
+                </span>
+              </div>
+
+              {/* Decorative serene illustration badge */}
+              <div className="absolute right-4 bottom-2 text-7xl select-none opacity-85 hidden sm:block pointer-events-none">
+                🧘‍♀️
+              </div>
+            </div>
+
+            {/* ================= MOOD BOARD & AI CHATBOT (DEAR DIARY) SIDE-BY-SIDE ================= */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Left: The Mood Board (lg:col-span-5) */}
+              <div className="lg:col-span-5 bg-white rounded-[32px] p-6 border border-[#E9DFFF] shadow-xs flex flex-col justify-between space-y-4">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-[#817583] uppercase tracking-wider">
-                      Today's mood
-                    </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#817583] uppercase tracking-wider">
+                        Today's Mood Board
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#DDF3DE] text-[#2C6336] border border-[#DDF3DE]">
+                        Live
+                      </span>
+                    </div>
                     <button
                       onClick={() => setIsMoodPickerOpen(true)}
-                      className="text-xs font-bold text-[#756291] hover:underline flex items-center gap-1"
+                      className="text-xs font-bold text-[#756291] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Edit3 className="w-3 h-3" />
-                      Change mood
+                      Change
                     </button>
                   </div>
 
+                  {/* Active Mood Tile */}
                   <div
-                    className="p-4 rounded-2xl flex items-center gap-3.5 border transition-all"
+                    className="p-4 sm:p-5 rounded-2xl flex items-center gap-4 border transition-all shadow-2xs"
                     style={{ backgroundColor: todayMood.color, borderColor: todayMood.textColor + '33' }}
                   >
-                    <span className="text-3xl">{todayMood.emoji}</span>
-                    <div>
-                      <h3 className="font-extrabold text-base" style={{ color: todayMood.textColor }}>
-                        {todayMood.label}
-                      </h3>
-                      <p className="text-xs opacity-90" style={{ color: todayMood.textColor }}>
+                    <span className="text-4xl select-none">{todayMood.emoji}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-extrabold text-lg" style={{ color: todayMood.textColor }}>
+                          {todayMood.label}
+                        </h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/70" style={{ color: todayMood.textColor }}>
+                          Current
+                        </span>
+                      </div>
+                      <p className="text-xs mt-0.5 opacity-90" style={{ color: todayMood.textColor }}>
                         {todayMood.desc}
                       </p>
                     </div>
                   </div>
+
+                  {/* Mood Shift Banner (Notices when user changes mood e.g. Happy -> Sad or Sad -> Happy) */}
+                  {previousMood && previousMood.label !== todayMood.label && (
+                    <div className="mt-3 p-3 rounded-2xl bg-gradient-to-r from-[#FFF8EE] to-[#FDF5F7] border border-[#F9DDE5] text-xs space-y-1 animate-in fade-in">
+                      <div className="text-[10px] font-bold uppercase text-[#756291] flex items-center gap-1">
+                        <span>✨ Mood shift recorded today:</span>
+                      </div>
+                      <div className="font-semibold text-[#403344] flex items-center gap-2">
+                        <span>{previousMood.emoji} {previousMood.label}</span>
+                        <span className="text-[#817583]">&rarr;</span>
+                        <span className="font-bold text-[#756291]">{todayMood.emoji} {todayMood.label}</span>
+                      </div>
+                      <p className="text-[11px] text-[#817583]">
+                        Your AI Dear Diary companion beside you noticed this change 💜
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 1-Tap Quick Mood Selector */}
+                  <div className="mt-4 space-y-2">
+                    <span className="text-[11px] font-bold text-[#817583] uppercase tracking-wider block">
+                      Quick Check-in (Tap to update)
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {moodOptions.map((opt) => (
+                        <button
+                          key={opt.label}
+                          onClick={() => handleSaveMood(opt)}
+                          title={`${opt.label}: ${opt.desc}`}
+                          className={`p-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border cursor-pointer ${
+                            todayMood?.label === opt.label
+                              ? 'ring-2 ring-[#756291] shadow-xs scale-105 font-bold'
+                              : 'hover:scale-105 opacity-80 hover:opacity-100'
+                          }`}
+                          style={{
+                            backgroundColor: opt.color,
+                            borderColor: opt.textColor + '40',
+                            color: opt.textColor,
+                          }}
+                        >
+                          <span className="text-xl">{opt.emoji}</span>
+                          <span className="text-[10px] truncate max-w-full">{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t border-[#F9DDE5]/40 text-xs text-[#817583] flex items-center justify-between">
-                  <span>Daily check-in</span>
+                <div className="pt-3 border-t border-[#F9DDE5]/40 text-xs text-[#817583] flex items-center justify-between">
+                  <span>Synced with AI Diary & Calendar</span>
                   <span className="text-[11px] bg-[#DDF3DE] text-[#2C6336] font-semibold px-2.5 py-0.5 rounded-md border border-[#DDF3DE]">
                     🔒 Saved to database
                   </span>
                 </div>
+              </div>
+
+              {/* Right: AI Dear Diary Chatbot (lg:col-span-7) */}
+              <div className="lg:col-span-7">
+                <DearDiaryChatbot
+                  userName={userName}
+                  todayMood={todayMood}
+                  previousMood={previousMood}
+                  cycleAnalysis={cycleAnalysis}
+                  onOpenMoodPicker={() => setIsMoodPickerOpen(true)}
+                />
               </div>
             </div>
 

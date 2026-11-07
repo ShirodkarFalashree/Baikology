@@ -91,7 +91,10 @@ body {
 }
 
 /* Accessible focus ring */
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+/* Accessible focus ring */
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible {
   outline: 2px solid #817583;
   outline-offset: 3px;
 }

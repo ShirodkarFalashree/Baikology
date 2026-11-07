@@ -57,6 +57,19 @@ const userSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    diaryMessages: {
+      type: [
+        {
+          id: { type: String },
+          sender: { type: String, enum: ['ai', 'user'], required: true },
+          text: { type: String, required: true },
+          moodContext: { type: String },
+          moodShift: { type: String },
+          timestamp: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

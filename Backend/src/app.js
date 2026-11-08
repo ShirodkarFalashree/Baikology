@@ -1,10 +1,11 @@
+
 const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
-// Enable CORS for frontend
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -13,15 +14,17 @@ app.use(
 );
 
 app.use(express.json());
-
-// Base endpoints
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/ai", aiRoutes);
+// Base endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "Welcome to Baikology API 🌷",
+    message: "Welcome to Baikology API",
     status: "running",
   });
 });
 
+// Health endpoint
 app.get("/api/v1/health", (req, res) => {
   res.json({
     status: "healthy",
@@ -29,8 +32,7 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
-// Mount Authentication routes
-app.use("/api/v1/auth", authRoutes);
+// Authentication routes
 
 // 404 Handler
 app.use((req, res) => {

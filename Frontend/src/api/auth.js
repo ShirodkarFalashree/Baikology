@@ -148,6 +148,8 @@ export async function logMoodCheckIn(moodData, token) {
   });
 }
 
+
+
 /**
  * Fetch Dear Diary chat messages from user profile
  */
@@ -181,7 +183,10 @@ export async function clearDiaryMessages(token) {
 /**
  * Send chat message to Gemini AI Dear Diary Companion
  */
-export async function sendDiaryChatMessage({ text, currentMood, previousMood, cycleAnalysis }, token) {
+export async function sendDiaryChatMessage(
+  { text, currentMood, previousMood, cycleAnalysis },
+  token
+) {
   return await apiRequest(
     '/api/v1/auth/diary/chat',
     { text, currentMood, previousMood, cycleAnalysis },
@@ -191,3 +196,14 @@ export async function sendDiaryChatMessage({ text, currentMood, previousMood, cy
     }
   );
 }
+
+/**
+ * Fetch AI-generated mood insights
+ */
+export async function getMoodInsights(token) {
+  return await apiRequest('/api/v1/ai/mood-insights', null, {
+    method: 'GET',
+    token,
+  });
+}
+

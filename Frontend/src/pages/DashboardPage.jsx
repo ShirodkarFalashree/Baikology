@@ -27,7 +27,11 @@ import {
   Info,
   Sparkle,
 } from 'lucide-react';
-import { getCurrentUser, logMoodCheckIn } from '../api/auth';
+import {
+  getCurrentUser,
+  logMoodCheckIn,
+  getMoodInsights,
+} from '../api/auth';
 import {
   analyzeCycle,
   generateMonthCalendar,
@@ -89,7 +93,9 @@ export default function DashboardPage({ initialTab = 'home' }) {
   const [moodNote, setMoodNote] = useState('');
   const [moodToast, setMoodToast] = useState(null);
   const [quickLogCell, setQuickLogCell] = useState(null);
-
+ const [moodInsights, setMoodInsights] = useState(null);
+const [insightsLoading, setInsightsLoading] = useState(false);
+const [insightsError, setInsightsError] = useState('');
   // Calendar month state
   const [calendarViewDate, setCalendarViewDate] = useState(new Date());
   const [selectedCalendarCell, setSelectedCalendarCell] = useState(null);
@@ -157,7 +163,51 @@ export default function DashboardPage({ initialTab = 'home' }) {
 
     loadDashboardUser();
   }, [navigate]);
+  useEffect(() => {
+  if (isLoading) return;
 
+  let cancelled = false;
+
+  const loadMoodInsights = async () => {
+    const token = localStorage.getItem('baikology_token');
+
+    if (!token) return;
+
+    setInsightsLoading(true);
+    setInsightsError('');
+
+    try {
+      const response = await getMoodInsights(token);
+      console.log('MOOD INSIGHTS RESPONSE:', response);
+console.log('MOOD INSIGHTS DATA:', response?.data);
+
+      if (cancelled) return;
+
+      if (response.success && response.data) {
+        setMoodInsights(response?.data?.data || response?.data || null);
+        //console.log('SAVED INSIGHTS:', response.data);
+      } else {
+        setInsightsError(
+          response.message || 'Unable to load mood insights.'
+        );
+      }
+    } catch (error) {
+      if (!cancelled) {
+        setInsightsError('Mood insights are temporarily unavailable.');
+      }
+    } finally {
+      if (!cancelled) {
+        setInsightsLoading(false);
+      }
+    }
+  };
+
+  loadMoodInsights();
+
+  return () => {
+    cancelled = true;
+  };
+}, [isLoading, moodLogs]);
   const q = user?.questionnaire || {};
 
   // Comprehensive Cycle Analysis from User Questionnaire Profile (Hooks called unconditionally at top level)
@@ -582,6 +632,161 @@ export default function DashboardPage({ initialTab = 'home' }) {
                 />
               </div>
             </div>
+            
+{/* ================= AI MOOD INSIGHTS ================= */}
+<div className="bg-white rounded-[32px] p-6 sm:p-8 border border-[#E9DFFF] shadow-xs space-y-5">
+
+  <div className="flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-[#756291]" />
+        <h3 className="text-xl font-extrabold text-[#403344] font-['Nunito',sans-serif]">
+          Your Mood Insights
+        </h3>
+      </div>
+      <p className="text-xs text-[#817583] mt-1">
+        Patterns from your recent mood check-ins and reflections.
+      </p>
+    </div>
+
+    <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#E9DFFF] text-[#756291]">
+      AI ANALYSIS · 7 DAYS
+    </span>
+  </div>
+
+  {insightsLoading && (
+    <div className="py-8 text-center text-sm text-[#817583]">
+      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+      Analyzing your recent check-ins...
+    </div>
+  )}
+
+  {!insightsLoading && insightsError && (
+    <div className="p-4 rounded-2xl bg-[#FFF8EE] text-sm text-[#817583]">
+      {insightsError}
+    </div>
+  )}
+
+  {!insightsLoading && moodInsights && (
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+        <div className="p-4 rounded-2xl bg-[#F5EFFF]">
+          <p className="text-[10px] font-bold text-[#817583] uppercase">
+            Most frequent mood
+          </p>
+          <p className="text-lg font-extrabold text-[#403344] mt-1">
+            {moodInsights.mostFrequentMood || 'Not available'}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FDF5F7]">
+          <p className="text-[10px] font-bold text-[#817583] uppercase">
+            Check-ins analyzed
+          </p>
+          <p className="text-2xl font-extrabold text-[#403344] mt-1">
+            {moodInsights.recordsAnalyzed}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FFFAF5] col-span-2 sm:col-span-1">
+          <p className="text-[10px] font-bold text-[#817583] uppercase">
+            Reflections analyzed
+          </p>
+          <p className="text-2xl font-extrabold text-[#403344] mt-1">
+            {moodInsights.writtenReflectionsAnalyzed}
+          </p>
+        </div>
+
+      </div>
+
+      {/* Mood distribution */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-[#403344]">
+          Mood distribution
+        </h4>
+
+        {Object.keys(moodInsights.moodDistribution || {}).length === 0 ? (
+          <p className="text-xs text-[#817583]">
+            No mood check-ins recorded in the last 7 days.
+          </p>
+        ) : (
+          Object.entries(moodInsights.moodDistribution).map(([mood, count]) => {
+            const maxCount = Math.max(
+              ...Object.values(moodInsights.moodDistribution),
+              1
+            );
+
+            return (
+              <div key={mood} className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold text-[#403344]">
+                    {mood}
+                  </span>
+                  <span className="text-[#817583]">{count}</span>
+                </div>
+
+                <div className="h-2.5 rounded-full bg-[#F3E8FF] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#9B85BD] transition-all"
+                    style={{
+                      width: `${(count / maxCount) * 100}%`
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Sentiment analysis */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FFF8EE] to-[#FDF5F7] border border-[#F9DDE5] space-y-2">
+        <h4 className="text-sm font-bold text-[#403344]">
+          Reflection sentiment
+        </h4>
+
+        <p className="text-xs text-[#817583] leading-relaxed">
+          {moodInsights.sentimentSummary}
+        </p>
+
+        {moodInsights.averageTextSentiment !== null && (
+          <p className="text-[11px] text-[#756291] font-semibold">
+            Average text sentiment: {moodInsights.averageTextSentiment}
+          </p>
+        )}
+      </div>
+
+      {/* Recurring themes */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-[#403344]">
+          Recurring themes in your reflections
+        </h4>
+
+        {moodInsights.themeAnalysis?.recurringThemes?.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {moodInsights.themeAnalysis.recurringThemes.map((item) => (
+              <span
+                key={item.theme}
+                className="px-3 py-2 rounded-full bg-[#F5EFFF] border border-[#E9DFFF] text-xs font-semibold text-[#756291]"
+              >
+                {item.theme.replaceAll('_', ' ')} · {item.mentions}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-[#817583]">
+            Not enough recurring themes identified yet. Keep adding reflections.
+          </p>
+        )}
+      </div>
+
+      <p className="text-[10px] text-[#817583] border-t border-[#E9DFFF] pt-3 leading-relaxed">
+        {moodInsights.message}
+      </p>
+    </>
+  )}
+</div>
 
             {/* 4 Quick Stat Tiles */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

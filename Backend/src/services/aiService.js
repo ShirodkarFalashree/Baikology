@@ -3,7 +3,7 @@ const AI_SERVICE_URL = process.env.PYTHON_AI_URL || "http://localhost:8000";
 
 exports.analyzeMood = async (moodLogs) => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
     const headers = {

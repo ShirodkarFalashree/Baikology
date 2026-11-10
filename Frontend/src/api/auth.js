@@ -5,8 +5,10 @@
  * Adheres strictly to privacy principles: never logs or exposes credentials.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  'https://baikology-backend.onrender.com'
+).replace(/\/+$/, '');
 /**
  * Helper to handle fetch requests with timeout and friendly connection error handling
  */

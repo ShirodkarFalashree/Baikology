@@ -12,7 +12,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
  */
 async function apiRequest(endpoint, bodyData, options = {}) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutMs = options.timeoutMs || 8000;
+const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const method = options.method || (bodyData ? 'POST' : 'GET');
   const token = options.token || localStorage.getItem('baikology_token');
@@ -217,23 +218,17 @@ export async function getMoodInsights(token) {
   });
 }
 
-/**
- * Send chat message to Main Health & Wellness AI Assistant
- */
+
+/* ========== MAIN HEALTH ASSISTANT APIs ========== */
+
 export async function sendHealthChatMessage({ text, userContext }, token) {
   return await apiRequest(
     '/api/v1/health-assistant/chat',
     { text, userContext },
-    {
-      method: 'POST',
-      token,
-    }
+    { method: 'POST', token }
   );
 }
 
-/**
- * Fetch Health Assistant conversation history & tuned topics
- */
 export async function getHealthMessages(token) {
   return await apiRequest('/api/v1/health-assistant/messages', null, {
     method: 'GET',
@@ -241,9 +236,6 @@ export async function getHealthMessages(token) {
   });
 }
 
-/**
- * Clear Health Assistant chat history
- */
 export async function clearHealthMessages(token) {
   return await apiRequest('/api/v1/health-assistant/messages', null, {
     method: 'DELETE',
@@ -251,18 +243,66 @@ export async function clearHealthMessages(token) {
   });
 }
 
-/**
- * Update tuned feed topics
- */
 export async function updateTunedTopics(topics, token) {
   return await apiRequest(
     '/api/v1/health-assistant/tuned-topics',
     { topics },
-    {
-      method: 'POST',
-      token,
-    }
+    { method: 'POST', token }
   );
 }
 
+/* ========== PREGNANCY CARE APIs ========== */
+
+export async function getPregnancyProfile(token) {
+  return await apiRequest('/api/v1/auth/pregnancy-profile', null, {
+    method: 'GET',
+    token,
+  });
+}
+
+export async function savePregnancyProfile(pregnancyData, token) {
+  return await apiRequest('/api/v1/auth/pregnancy-profile', pregnancyData, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function savePregnancyWellness(data, token) {
+  return await apiRequest('/api/v1/auth/pregnancy-wellness', data, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function getPregnancyWellness(token) {
+  return await apiRequest('/api/v1/auth/pregnancy-wellness', null, {
+    method: 'GET',
+    token,
+  });
+}
+/* ========== PREGNANCY AI ASSISTANT APIs ========== */
+
+export async function sendPregnancyChatMessage({ text }, token) {
+  return await apiRequest(
+    '/api/v1/pregnancy-assistant/chat',
+    { text },
+    { method: 'POST', token, timeoutMs: 85000 }
+  );
+}
+
+export async function getPregnancyChatMessages(token) {
+  return await apiRequest(
+    '/api/v1/pregnancy-assistant/messages',
+    null,
+    { method: 'GET', token }
+  );
+}
+
+export async function clearPregnancyChatMessages(token) {
+  return await apiRequest(
+    '/api/v1/pregnancy-assistant/messages',
+    null,
+    { method: 'DELETE', token }
+  );
+}
 

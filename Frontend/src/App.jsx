@@ -6,7 +6,12 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import QuestionnairePage from './pages/QuestionnairePage';
 import DashboardPage from './pages/DashboardPage';
-
+import JourneySelectionPage from './pages/JourneySelectionPage';
+import PregnancyOnboardingPage from './pages/PregnancyOnboardingPage';
+import PregnancyDashboardPage from './pages/PregnancyDashboardPage';
+import PregnancyWellnessPage from './pages/PregnancyWellnessPage';
+import PregnancyGuidePage from './pages/PregnancyGuidePage';
+import PregnancyCareLayout from './components/PregnancyCareLayout';
 export default function App() {
   return (
     <BrowserRouter>
@@ -17,6 +22,29 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/onboarding" element={<QuestionnairePage />} />
         <Route path="/questionnaire" element={<QuestionnairePage />} />
+        <Route path="/journey" element={<JourneySelectionPage />} />
+        <Route element={<PregnancyCareLayout />}>
+  <Route
+    path="/pregnancy-onboarding"
+    element={<PregnancyOnboardingPage />}
+  />
+  <Route
+    path="/pregnancy-dashboard"
+    element={<PregnancyDashboardPage />}
+  />
+  <Route
+    path="/pregnancy-wellness"
+    element={<PregnancyWellnessPage />}
+  />
+  <Route
+    path="/pregnancy-guide"
+    element={<PregnancyGuidePage />}
+  />
+  <Route
+    path="/pregnancy-edit"
+    element={<PregnancyOnboardingPage editMode />}
+  />
+</Route>
 
         {/* Dashboard & Dedicated Tab Routes */}
         <Route path="/dashboard" element={<DashboardPage initialTab="home" />} />

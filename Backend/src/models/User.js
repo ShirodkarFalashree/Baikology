@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    pregnancyProfile: {
+  type: mongoose.Schema.Types.Mixed,
+  default: null,
+},
     moodLogs: {
       type: [
         {
@@ -78,6 +82,21 @@ const userSchema = new mongoose.Schema(
           text: { type: String, required: true },
           detectedTopics: [{ type: String }],
           recommendedArticles: [{ type: String }],
+          timestamp: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+        pregnancyChatMessages: {
+      type: [
+        {
+          id: { type: String },
+          sender: {
+            type: String,
+            enum: ['ai', 'user'],
+            required: true,
+          },
+          text: { type: String, required: true },
           timestamp: { type: Date, default: Date.now },
         },
       ],

@@ -4,6 +4,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const healthAssistantRoutes = require("./routes/healthAssistantRoutes");
+const pregnancyAssistantRoutes = require("./routes/pregnancyAssistantRoutes");
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/health-assistant", healthAssistantRoutes);
+app.use("/api/v1/pregnancy-assistant", pregnancyAssistantRoutes);
 // Base endpoint
 app.get("/", (req, res) => {
   res.json({

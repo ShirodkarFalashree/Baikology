@@ -92,15 +92,10 @@ export default function LoginPage() {
       }
 
       // Check DB questionnaire status: if user has not completed questionnaire, go to questionnaire first
-      const hasCompletedQuestionnaire = Boolean(user?.isOnboardingCompleted);
-
-      setTimeout(() => {
-        if (hasCompletedQuestionnaire) {
-          navigate('/dashboard');
-        } else {
-          navigate('/onboarding');
-        }
-      }, 700);
+      // Let the user choose their health journey
+setTimeout(() => {
+  navigate('/journey');
+}, 700);
     }
   };
 

@@ -1,19 +1,19 @@
 
 const User = require("../models/User");
+const MoodLog = require("../models/MoodLog");
 const { analyzeMood } = require("../services/aiService");
 
 exports.getMoodInsights = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("moodLogs");
+    const userId = req.user.id;
+    let moodLogs = await MoodLog.find({ user: userId }).sort({ date: 1 });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        detail: "User not found.",
-      });
+    if (!moodLogs || moodLogs.length === 0) {
+      const user = await User.findById(userId).select("moodLogs");
+      moodLogs = user?.moodLogs || [];
     }
 
-    const insights = await analyzeMood(user.moodLogs || []);
+    const insights = await analyzeMood(moodLogs || []);
 
     return res.status(200).json({
       success: true,

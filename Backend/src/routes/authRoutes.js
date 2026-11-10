@@ -14,6 +14,7 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/me', authMiddleware, authController.getMe);
 router.post('/questionnaire', authMiddleware, authController.saveQuestionnaire);
 router.post('/mood', authMiddleware, authController.saveMoodLog);
+router.get('/mood', authMiddleware, authController.getMoodLogs);
 router.get('/diary', authMiddleware, authController.getDiaryMessages);
 router.post('/diary', authMiddleware, authController.saveDiaryMessage);
 router.post('/diary/chat', authMiddleware, authController.chatWithGemini);

@@ -284,7 +284,18 @@ export function generateMonthCalendar(targetYear, targetMonth, cycleAnalysis, mo
   if (Array.isArray(moodLogs)) {
     moodLogs.forEach((log) => {
       if (log && log.date) {
-        moodMap[log.date] = log;
+        let key = '';
+        if (typeof log.date === 'string') {
+          key = log.date.split('T')[0];
+        } else if (log.date instanceof Date) {
+          const y = log.date.getFullYear();
+          const m = String(log.date.getMonth() + 1).padStart(2, '0');
+          const d = String(log.date.getDate()).padStart(2, '0');
+          key = `${y}-${m}-${d}`;
+        }
+        if (key) {
+          moodMap[key] = log;
+        }
       }
     });
   }

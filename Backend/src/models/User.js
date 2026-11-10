@@ -70,6 +70,23 @@ const userSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    healthChatMessages: {
+      type: [
+        {
+          id: { type: String },
+          sender: { type: String, enum: ['ai', 'user'], required: true },
+          text: { type: String, required: true },
+          detectedTopics: [{ type: String }],
+          recommendedArticles: [{ type: String }],
+          timestamp: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    tunedTopics: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

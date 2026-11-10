@@ -148,6 +148,16 @@ export async function logMoodCheckIn(moodData, token) {
   });
 }
 
+/**
+ * Fetch all daily mood check-ins for authenticated user
+ */
+export async function getMoodLogs(token) {
+  return await apiRequest('/api/v1/auth/mood', null, {
+    method: 'GET',
+    token,
+  });
+}
+
 
 
 /**
@@ -181,7 +191,7 @@ export async function clearDiaryMessages(token) {
 }
 
 /**
- * Send chat message to Gemini AI Dear Diary Companion
+ * Send chat message to AI Dear Diary Companion (Groq Powered)
  */
 export async function sendDiaryChatMessage(
   { text, currentMood, previousMood, cycleAnalysis },
@@ -206,4 +216,53 @@ export async function getMoodInsights(token) {
     token,
   });
 }
+
+/**
+ * Send chat message to Main Health & Wellness AI Assistant
+ */
+export async function sendHealthChatMessage({ text, userContext }, token) {
+  return await apiRequest(
+    '/api/v1/health-assistant/chat',
+    { text, userContext },
+    {
+      method: 'POST',
+      token,
+    }
+  );
+}
+
+/**
+ * Fetch Health Assistant conversation history & tuned topics
+ */
+export async function getHealthMessages(token) {
+  return await apiRequest('/api/v1/health-assistant/messages', null, {
+    method: 'GET',
+    token,
+  });
+}
+
+/**
+ * Clear Health Assistant chat history
+ */
+export async function clearHealthMessages(token) {
+  return await apiRequest('/api/v1/health-assistant/messages', null, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+/**
+ * Update tuned feed topics
+ */
+export async function updateTunedTopics(topics, token) {
+  return await apiRequest(
+    '/api/v1/health-assistant/tuned-topics',
+    { topics },
+    {
+      method: 'POST',
+      token,
+    }
+  );
+}
+
 

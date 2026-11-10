@@ -39,6 +39,18 @@ import {
   formatShortDate,
 } from '../utils/cycleEngine';
 import DearDiaryChatbot from '../components/DearDiaryChatbot';
+import MainHealthChatbot from '../components/MainHealthChatbot';
+import ArticleReaderModal from '../components/ArticleReaderModal';
+import { WELLNESS_ARTICLES, getTunedArticles } from '../data/wellnessArticles';
+
+// Helper to get local YYYY-MM-DD date string (consistent across all local timezones)
+function formatLocalDate(d = new Date()) {
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export default function DashboardPage({ initialTab = 'home' }) {
   const navigate = useNavigate();
@@ -91,7 +103,6 @@ export default function DashboardPage({ initialTab = 'home' }) {
   // Mood logs state (synced with MongoDB & daily check-in)
   const [moodLogs, setMoodLogs] = useState([]);
   const [moodNote, setMoodNote] = useState('');
-  const [moodToast, setMoodToast] = useState(null);
   const [quickLogCell, setQuickLogCell] = useState(null);
  const [moodInsights, setMoodInsights] = useState(null);
 const [insightsLoading, setInsightsLoading] = useState(false);
@@ -111,6 +122,16 @@ const [insightsError, setInsightsError] = useState('');
   const [previousMood, setPreviousMood] = useState(null);
   const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [activeArticleModal, setActiveArticleModal] = useState(null);
+  const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
+  const [tunedTopics, setTunedTopics] = useState(() => {
+    try {
+      const cached = localStorage.getItem('baikology_tuned_topics');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [forYouCategory, setForYouCategory] = useState('insights'); // insights | learn | selfcare
 
   // Fetch verified user from database
@@ -132,8 +153,13 @@ const [insightsError, setInsightsError] = useState('');
           const userMoods = userData.moodLogs || [];
           setMoodLogs(userMoods);
 
+          if (Array.isArray(userData.tunedTopics) && userData.tunedTopics.length > 0) {
+            setTunedTopics(userData.tunedTopics);
+            localStorage.setItem('baikology_tuned_topics', JSON.stringify(userData.tunedTopics));
+          }
+
           // Check if today's mood was already checked in
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = formatLocalDate(new Date());
           const foundToday = userMoods.find((m) => m.date === todayStr);
           if (foundToday) {
             setTodayMood(foundToday);
@@ -240,7 +266,8 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
   };
 
   const handleSaveMood = async (moodObj, noteText = '', targetDate = null) => {
-    const dateKey = targetDate || new Date().toISOString().split('T')[0];
+    const todayLocal = formatLocalDate(new Date());
+    const dateKey = targetDate || todayLocal;
     const token = localStorage.getItem('baikology_token');
 
     const moodEntry = {
@@ -252,7 +279,7 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
       note: noteText,
     };
 
-    if (!targetDate || targetDate === new Date().toISOString().split('T')[0]) {
+    if (!targetDate || targetDate === todayLocal) {
       if (todayMood && todayMood.label !== moodObj.label) {
         setPreviousMood(todayMood);
       }
@@ -267,11 +294,6 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
 
     setIsMoodPickerOpen(false);
     setQuickLogCell(null);
-
-    setMoodToast({
-      message: `Checked in as ${moodObj.emoji} ${moodObj.label}! Stored in database & marked on calendar 🌸`,
-    });
-    setTimeout(() => setMoodToast(null), 3500);
 
     if (token) {
       try {
@@ -338,14 +360,6 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
 
   return (
     <div className="min-h-screen bg-[#FDF9F4] text-[#403344] font-['Plus_Jakarta_Sans',sans-serif] flex flex-col md:flex-row selection:bg-[#F9DDE5]">
-      {/* Toast Notification for DB & Calendar Sync */}
-      {moodToast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#403344] text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2.5 text-xs sm:text-sm font-semibold animate-in fade-in slide-in-from-top-4 duration-300">
-          <span>🌸</span>
-          <span>{moodToast.message}</span>
-        </div>
-      )}
-
       {/* ================= SIDEBAR NAVIGATION ================= */}
       <aside className="w-full md:w-64 bg-white border-r border-[#E9DFFF]/70 flex flex-col shrink-0 p-5 justify-between">
         <div className="space-y-6">
@@ -892,7 +906,7 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
                   <button
                     onClick={() => {
                       setQuickLogCell({
-                        dateKey: new Date().toISOString().split('T')[0],
+                        dateKey: formatLocalDate(new Date()),
                         dayNum: new Date().getDate(),
                       });
                       setIsMoodPickerOpen(true);
@@ -1011,14 +1025,21 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
                         </div>
 
                         {/* Middle: Mood Check-in Display */}
-                        <div className="flex items-center justify-center my-auto">
+                        <div className="flex items-center justify-center my-auto w-full">
                           {cell.mood ? (
                             <div
-                              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/95 shadow-xs border border-[#E9DFFF]"
+                              className="flex items-center justify-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs border transition-transform hover:scale-105 max-w-full"
+                              style={{
+                                backgroundColor: cell.mood.color || '#FFFFFF',
+                                borderColor: (cell.mood.textColor || '#756291') + '40',
+                              }}
                               title={`Checked in: ${cell.mood.label}${cell.mood.note ? ' - ' + cell.mood.note : ''}`}
                             >
-                              <span className="text-sm sm:text-base leading-none">{cell.mood.emoji}</span>
-                              <span className="text-[9px] font-bold hidden sm:inline text-[#403344] truncate max-w-[48px]">
+                              <span className="text-base sm:text-lg leading-none">{cell.mood.emoji}</span>
+                              <span
+                                className="text-[9px] sm:text-[10px] font-extrabold truncate max-w-[50px] sm:max-w-[65px]"
+                                style={{ color: cell.mood.textColor || '#403344' }}
+                              >
                                 {cell.mood.label}
                               </span>
                             </div>
@@ -1138,29 +1159,49 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
               )}
 
               {forYouCategory === 'learn' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-[#FFFAF5] border border-[#E9DFFF]">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#DDF3DE] text-[#2C6336]">
-                      Hormonal Health
-                    </span>
-                    <h5 className="font-bold text-sm text-[#403344] mt-2">
-                      PCOS: understanding the basics without panic
-                    </h5>
-                    <p className="text-xs text-[#817583] mt-1">
-                      Clear facts on symptoms, insulin sensitivity, and gentle ways to advocate for your body.
-                    </p>
-                  </div>
+                <div className="space-y-3">
+                  {tunedTopics.length > 0 && (
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#756291] bg-[#FAF5FF] p-2.5 rounded-xl border border-[#E9DFFF]">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Tuned to your questions: <strong>{tunedTopics.join(', ')}</strong></span>
+                      </span>
+                      <button
+                        onClick={() => handleTabChange('learn')}
+                        className="text-[11px] font-bold text-[#756291] hover:underline"
+                      >
+                        View all &rarr;
+                      </button>
+                    </div>
+                  )}
 
-                  <div className="p-4 rounded-2xl bg-[#FFFAF5] border border-[#E9DFFF]">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#FFF0B8] text-[#826500]">
-                      Mood & Body
-                    </span>
-                    <h5 className="font-bold text-sm text-[#403344] mt-2">
-                      Why can mood feel different throughout the month?
-                    </h5>
-                    <p className="text-xs text-[#817583] mt-1">
-                      How progesterone and estrogen influence serotonin receptors without being a personal failing.
-                    </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {getTunedArticles(tunedTopics).slice(0, 4).map((art) => (
+                      <div
+                        key={art.id}
+                        onClick={() => setActiveArticleModal(art)}
+                        className="p-4 rounded-2xl bg-[#FFFAF5] border border-[#E9DFFF] hover:border-[#756291] shadow-xs cursor-pointer transition-all hover:bg-white group flex flex-col justify-between"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${art.badgeColor}`}>
+                              {art.categoryLabel}
+                            </span>
+                            <span className="text-[10px] text-[#817583] font-medium">{art.readTime}</span>
+                          </div>
+                          <h5 className="font-bold text-sm text-[#403344] group-hover:text-[#756291] transition-colors line-clamp-2">
+                            {art.title}
+                          </h5>
+                          <p className="text-xs text-[#817583] line-clamp-2 leading-relaxed">
+                            {art.summary}
+                          </p>
+                        </div>
+                        <div className="text-xs font-bold text-[#756291] pt-3 flex items-center gap-1">
+                          <span>Read guide</span>
+                          <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1529,56 +1570,153 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
           </div>
         )}
 
-        {/* ================= TAB: LEARN (Screen 10) ================= */}
+        {/* ================= TAB: LEARN & ARTICLES ================= */}
         {activeTab === 'learn' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-2xl font-extrabold text-[#403344] font-['Nunito',sans-serif]">
-                Big questions. Gentle answers. 📚
-              </h3>
-              <p className="text-xs sm:text-sm text-[#817583]">
-                Science-informed explanations without fear-mongering or judgment.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-extrabold text-[#403344] font-['Nunito',sans-serif] flex items-center gap-2">
+                  <span>Big questions. Gentle answers.</span>
+                  <span>📚</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-[#817583]">
+                  Science-informed, compassionate guides without fear-mongering or judgment.
+                </p>
+              </div>
+
+              {tunedTopics.length > 0 && (
+                <button
+                  onClick={() => {
+                    setTunedTopics([]);
+                    localStorage.removeItem('baikology_tuned_topics');
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#817583] hover:text-[#403344] bg-white border border-[#E9DFFF] hover:bg-[#FFFAF5] transition-colors w-fit"
+                >
+                  Clear topic tuning
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <div className="bg-white p-5 rounded-[28px] border border-[#E9DFFF] space-y-3 shadow-xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#756291] bg-[#E9DFFF] px-2.5 py-0.5 rounded-full">
-                  Cycle Science
-                </span>
-                <h4 className="font-extrabold text-base text-[#403344]">
-                  What actually happens during your menstrual cycle?
-                </h4>
-                <p className="text-xs text-[#817583] leading-relaxed">
-                  The 4 biological phases (Menstrual, Follicular, Ovulation, Luteal) explained in reassuring plain English.
-                </p>
-                <div className="text-xs font-bold text-[#756291] pt-2">4 min read &rarr;</div>
-              </div>
+            {/* Tuned Feed Banner */}
+            {tunedTopics.length > 0 && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FAF5FF] via-[#FFF5F8] to-[#FFFAF5] border border-[#E9DFFF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white border border-[#E9DFFF] flex items-center justify-center text-lg shrink-0 shadow-xs">
+                    ✨
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-[#403344] flex items-center gap-2">
+                      <span>Feed Tuned to Your Recent Questions</span>
+                      <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#E9DFFF] text-[#554070]">
+                        Personalized
+                      </span>
+                    </h4>
+                    <p className="text-xs text-[#817583] mt-0.5">
+                      Prioritizing articles matching your recent inquiries about{' '}
+                      <span className="font-semibold text-[#756291]">
+                        {tunedTopics.join(', ')}
+                      </span>.
+                    </p>
+                  </div>
+                </div>
 
-              <div className="bg-white p-5 rounded-[28px] border border-[#E9DFFF] space-y-3 shadow-xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#2C6336] bg-[#DDF3DE] px-2.5 py-0.5 rounded-full">
-                  Hormonal Health
-                </span>
-                <h4 className="font-extrabold text-base text-[#403344]">
-                  PCOS: understanding the basics without panic
-                </h4>
-                <p className="text-xs text-[#817583] leading-relaxed">
-                  Common signs, what it actually means biologically, and how to gently advocate for yourself with doctors.
-                </p>
-                <div className="text-xs font-bold text-[#756291] pt-2">5 min read &rarr;</div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {tunedTopics.map((top) => (
+                    <span
+                      key={top}
+                      className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white text-[#756291] border border-[#E9DFFF] shadow-2xs"
+                    >
+                      #{top}
+                    </span>
+                  ))}
+                </div>
               </div>
+            )}
 
-              <div className="bg-white p-5 rounded-[28px] border border-[#E9DFFF] space-y-3 shadow-xs">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#826500] bg-[#FFF0B8] px-2.5 py-0.5 rounded-full">
-                  Mind & Body
-                </span>
-                <h4 className="font-extrabold text-base text-[#403344]">
-                  Why can your mood feel different throughout the month?
-                </h4>
-                <p className="text-xs text-[#817583] leading-relaxed">
-                  Understanding neurotransmitters and estrogen dips so you stop feeling that something is "wrong" with you.
-                </p>
-                <div className="text-xs font-bold text-[#756291] pt-2">3 min read &rarr;</div>
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {[
+                { id: 'all', label: 'All Guides' },
+                { id: 'pcos_pcod', label: 'PCOS & PCOD' },
+                { id: 'pregnancy', label: 'Pregnancy & Testing' },
+                { id: 'abortion', label: 'Safe Abortion Care' },
+                { id: 'contraception', label: 'Emergency Pills' },
+                { id: 'period_health', label: 'Period Pain & Cramps' },
+                { id: 'hormonal_health', label: 'Hormones & Skin' },
+                { id: 'nutrition', label: 'Nutrition & Seeds' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setArticleCategoryFilter(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                    articleCategoryFilter === tab.id
+                      ? 'bg-[#756291] text-white shadow-xs'
+                      : 'bg-white text-[#817583] border border-[#E9DFFF] hover:bg-[#FFFAF5] hover:text-[#403344]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Articles Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {getTunedArticles(tunedTopics)
+                .filter((art) =>
+                  articleCategoryFilter === 'all'
+                    ? true
+                    : art.category === articleCategoryFilter
+                )
+                .map((art) => (
+                  <div
+                    key={art.id}
+                    onClick={() => setActiveArticleModal(art)}
+                    className="bg-white p-5 rounded-[28px] border border-[#E9DFFF] hover:border-[#756291] space-y-3.5 shadow-xs hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${art.badgeColor}`}>
+                          {art.categoryLabel}
+                        </span>
+                        <span className="text-xs text-[#817583] font-medium">{art.readTime}</span>
+                      </div>
+
+                      <h4 className="font-extrabold text-base text-[#403344] group-hover:text-[#756291] transition-colors leading-snug">
+                        {art.title}
+                      </h4>
+
+                      <p className="text-xs text-[#817583] leading-relaxed line-clamp-3">
+                        {art.summary}
+                      </p>
+
+                      {/* Key takeaway preview */}
+                      {art.keyTakeaways && art.keyTakeaways[0] && (
+                        <div className="text-[11px] text-[#5C5061] bg-[#FFFAF5] p-2.5 rounded-xl border border-[#EFE7F6] line-clamp-2">
+                          💡 <strong>Key note:</strong> {art.keyTakeaways[0]}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-[#F4EEF8] flex items-center justify-between text-xs font-bold text-[#756291]">
+                      <span>Read full guide</span>
+                      <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Bottom Support Banner */}
+            <div className="p-5 rounded-[28px] bg-gradient-to-r from-[#FAF5FF] via-[#FFF5F8] to-[#FFF8EE] border border-[#E9DFFF] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🌸</span>
+                <div>
+                  <h4 className="font-bold text-sm text-[#403344]">
+                    Have a private question not covered in these guides?
+                  </h4>
+                  <p className="text-xs text-[#817583]">
+                    Click the floating "Ask Baikology" button in the bottom right corner for confidential answers anytime.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1809,6 +1947,24 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
           </div>
         </div>
       )}
+      {/* Full Article Reader Modal */}
+      {activeArticleModal && (
+        <ArticleReaderModal
+          article={activeArticleModal}
+          onClose={() => setActiveArticleModal(null)}
+          onAskAboutArticle={(prompt) => {
+            // Can be picked up by the user in chat
+          }}
+        />
+      )}
+
+      {/* Main Collapsible Health & Wellness Chatbot (Diagonally in the right corner) */}
+      <MainHealthChatbot
+        userName={preferredName}
+        cyclePhase={cycleAnalysis?.phaseName}
+        onOpenArticle={(article) => setActiveArticleModal(article)}
+        onTopicsUpdated={(topics) => setTunedTopics(topics)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const healthAssistantRoutes = require("./routes/healthAssistantRoutes");
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(
 app.use(express.json());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/health-assistant", healthAssistantRoutes);
 // Base endpoint
 app.get("/", (req, res) => {
   res.json({

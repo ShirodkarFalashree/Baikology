@@ -168,7 +168,7 @@ export default function DearDiaryChatbot({
 
     try {
       if (token) {
-        // Send to backend which uses GEMINI_API_KEY with empathetic context
+        // Send to backend which uses Groq API with empathetic context
         const response = await sendDiaryChatMessage(
           {
             text,
@@ -196,7 +196,7 @@ export default function DearDiaryChatbot({
         }
       }
     } catch (err) {
-      console.warn('Backend Gemini call note, applying local companion engine fallback:', err);
+      console.warn('Backend diary chat note, applying local companion engine fallback:', err);
     }
 
     // Fallback: real-time compassionate engine with gentle pacing

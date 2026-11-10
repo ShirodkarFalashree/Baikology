@@ -1,8 +1,9 @@
 const User = require('../models/User');
+const MoodLog = require('../models/MoodLog');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../services/emailService');
-const { generateGeminiReply } = require('../services/geminiService');
+const { generateGroqReply } = require('../services/groqService');
 
 // Helper to sign JWT tokens
 function signToken(userId, email, rememberMe = false) {
@@ -276,6 +277,37 @@ exports.getMe = async (req, res) => {
       });
     }
 
+    // Fetch mood logs from dedicated MoodLog model
+    let moodLogs = await MoodLog.find({ user: user._id }).sort({ date: 1 });
+
+    // Migrate any legacy moodLogs from User document if MoodLog is empty
+    if ((!moodLogs || moodLogs.length === 0) && Array.isArray(user.moodLogs) && user.moodLogs.length > 0) {
+      try {
+        const seedOps = user.moodLogs.map((log) => ({
+          updateOne: {
+            filter: { user: user._id, date: log.date },
+            update: {
+              $set: {
+                user: user._id,
+                date: log.date,
+                label: log.label,
+                emoji: log.emoji || '😌',
+                color: log.color || '#DDF3DE',
+                textColor: log.textColor || '#2C6336',
+                note: log.note || '',
+                loggedAt: log.loggedAt || new Date(),
+              },
+            },
+            upsert: true,
+          },
+        }));
+        await MoodLog.bulkWrite(seedOps);
+        moodLogs = await MoodLog.find({ user: user._id }).sort({ date: 1 });
+      } catch (migrationErr) {
+        console.warn('MoodLog migration note:', migrationErr.message);
+      }
+    }
+
     res.status(200).json({
       success: true,
       user: {
@@ -284,8 +316,9 @@ exports.getMe = async (req, res) => {
         email: user.email,
         isOnboardingCompleted: user.isOnboardingCompleted || false,
         questionnaire: user.questionnaire || null,
-        moodLogs: user.moodLogs || [],
+        moodLogs: moodLogs || [],
         diaryMessages: user.diaryMessages || [],
+        tunedTopics: user.tunedTopics || [],
         createdAt: user.createdAt,
       },
     });
@@ -369,42 +402,72 @@ exports.saveMoodLog = async (req, res) => {
       });
     }
 
-    if (!Array.isArray(user.moodLogs)) {
-      user.moodLogs = [];
-    }
+    // Upsert into dedicated MoodLog model
+    const moodDoc = await MoodLog.findOneAndUpdate(
+      { user: userId, date },
+      {
+        user: userId,
+        date,
+        label,
+        emoji: emoji || '😌',
+        color: color || '#DDF3DE',
+        textColor: textColor || '#2C6336',
+        note: note || '',
+        loggedAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    const existingIndex = user.moodLogs.findIndex((log) => log.date === date);
+    // Fetch all current mood logs from MoodLog model
+    const allMoodLogs = await MoodLog.find({ user: userId }).sort({ date: 1 });
 
-    const moodEntry = {
-      date,
-      label,
-      emoji: emoji || '😌',
-      color: color || '#DDF3DE',
-      textColor: textColor || '#2C6336',
-      note: note || '',
-      loggedAt: new Date(),
-    };
-
-    if (existingIndex >= 0) {
-      user.moodLogs[existingIndex] = moodEntry;
-    } else {
-      user.moodLogs.push(moodEntry);
-    }
-
-    user.markModified('moodLogs');
-    await user.save();
+    // Sync to User document atomically without version error
+    await User.findByIdAndUpdate(userId, {
+      $set: {
+        moodLogs: allMoodLogs.map((m) => ({
+          date: m.date,
+          label: m.label,
+          emoji: m.emoji,
+          color: m.color,
+          textColor: m.textColor,
+          note: m.note,
+          loggedAt: m.loggedAt,
+        })),
+      },
+    }).catch((err) => console.warn('User moodLogs sync note:', err.message));
 
     res.status(200).json({
       success: true,
       message: 'Mood checked in successfully! Marked on your calendar 🌸',
-      moodLog: moodEntry,
-      moodLogs: user.moodLogs,
+      moodLog: moodDoc,
+      moodLogs: allMoodLogs,
     });
   } catch (error) {
     console.error('Save mood log error:', error);
     res.status(500).json({
       success: false,
       detail: error.message || 'Failed to save daily mood log.',
+    });
+  }
+};
+
+/**
+ * Get all mood logs for authenticated user
+ * GET /api/v1/auth/mood
+ */
+exports.getMoodLogs = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const moodLogs = await MoodLog.find({ user: userId }).sort({ date: 1 });
+
+    res.status(200).json({
+      success: true,
+      moodLogs: moodLogs || [],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      detail: error.message || 'Failed to fetch mood logs.',
     });
   }
 };
@@ -475,20 +538,23 @@ exports.saveDiaryMessage = async (req, res) => {
       timestamp: new Date(),
     };
 
-    // Keep up to 100 recent messages for good performance
-    user.diaryMessages.push(newMsg);
-    if (user.diaryMessages.length > 100) {
-      user.diaryMessages = user.diaryMessages.slice(-100);
-    }
+    // Atomically persist message without VersionError
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        diaryMessages: {
+          $each: [newMsg],
+          $slice: -100,
+        },
+      },
+    });
 
-    user.markModified('diaryMessages');
-    await user.save();
+    const updatedUser = await User.findById(userId).select('diaryMessages');
 
     res.status(200).json({
       success: true,
       message: 'Diary message recorded.',
       diaryMessage: newMsg,
-      diaryMessages: user.diaryMessages,
+      diaryMessages: updatedUser?.diaryMessages || [],
     });
   } catch (error) {
     console.error('Save diary message error:', error);
@@ -533,10 +599,10 @@ exports.clearDiaryMessages = async (req, res) => {
 };
 
 /**
- * Chat with Gemini AI Dear Diary Companion
+ * Chat with Groq AI Dear Diary Companion
  * POST /api/v1/auth/diary/chat
  */
-exports.chatWithGemini = async (req, res) => {
+exports.chatWithDiary = exports.chatWithGemini = async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findById(userId);
@@ -573,8 +639,8 @@ exports.chatWithGemini = async (req, res) => {
     };
     user.diaryMessages.push(userMsg);
 
-    // 2. Generate Gemini response
-    const aiReplyText = await generateGeminiReply({
+    // 2. Generate Groq response
+    const aiReplyText = await generateGroqReply({
       userMessage: text.trim(),
       userName,
       currentMood,
@@ -594,23 +660,27 @@ exports.chatWithGemini = async (req, res) => {
     };
     user.diaryMessages.push(aiMsg);
 
-    // Cap at 100 messages for storage efficiency
-    if (user.diaryMessages.length > 100) {
-      user.diaryMessages = user.diaryMessages.slice(-100);
-    }
+    // Atomically persist conversation without VersionError
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        diaryMessages: {
+          $each: [userMsg, aiMsg],
+          $slice: -100,
+        },
+      },
+    });
 
-    user.markModified('diaryMessages');
-    await user.save();
+    const updatedUser = await User.findById(userId).select('diaryMessages');
 
     res.status(200).json({
       success: true,
       aiReply: aiReplyText,
       userMessage: userMsg,
       aiMessage: aiMsg,
-      diaryMessages: user.diaryMessages,
+      diaryMessages: updatedUser?.diaryMessages || [],
     });
   } catch (error) {
-    console.error('Chat with Gemini error:', error);
+    console.error('Chat with Diary error:', error);
     res.status(500).json({
       success: false,
       detail: error.message || 'Failed to generate response.',

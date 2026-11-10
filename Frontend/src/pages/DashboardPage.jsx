@@ -486,6 +486,12 @@ console.log('MOOD INSIGHTS DATA:', response?.data);
 
           <div className="flex items-center gap-2.5">
             <button
+            onClick={() => navigate('/journey')}
+            className="rounded-xl border border-[#E9DFFF] bg-white px-4 py-2 text-sm text-[#80629F]"
+          >
+            Change journey
+          </button>
+            <button
               onClick={() => setIsMoodPickerOpen(true)}
               className="px-4 py-2.5 rounded-full bg-[#756291] hover:bg-[#5e4b78] text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
             >

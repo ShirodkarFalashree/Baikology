@@ -110,9 +110,10 @@ export default function RegisterPage() {
       }
 
       // New customer must complete questionnaire
-      setTimeout(() => {
-        navigate('/onboarding');
-      }, 700);
+      // Let the user choose their health journey
+setTimeout(() => {
+  navigate('/journey');
+}, 700);
     }
   };
 

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
+const pregnancyController = require('../controllers/pregnancyController');
 
 // Public authentication routes
 router.post('/register', authController.register);
@@ -19,5 +20,19 @@ router.get('/diary', authMiddleware, authController.getDiaryMessages);
 router.post('/diary', authMiddleware, authController.saveDiaryMessage);
 router.post('/diary/chat', authMiddleware, authController.chatWithGemini);
 router.delete('/diary', authMiddleware, authController.clearDiaryMessages);
+router.get('/pregnancy-profile', authMiddleware, pregnancyController.getPregnancyProfile);
+
+router.post('/pregnancy-profile', authMiddleware, pregnancyController.savePregnancyProfile);
+router.post(
+  '/pregnancy-wellness',
+  authMiddleware,
+  pregnancyController.saveWellnessLog
+);
+
+router.get(
+  '/pregnancy-wellness',
+  authMiddleware,
+  pregnancyController.getWellnessLogs
+);
 
 module.exports = router;
